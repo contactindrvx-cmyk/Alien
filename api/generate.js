@@ -23,10 +23,8 @@ module.exports = async function handler(req, res) {
         throw new Error('GOOGLE_CREDENTIALS_JSON انوائرمنٹ ویری ایبل نہیں ملا۔');
       }
 
-      // ٹیکسٹ کو صاف کر کے آبجیکٹ میں تبدیل کرنا تاکہ کوئی ایرر نہ آئے
       const credentials = JSON.parse(envCredentials.trim());
 
-      // ورٹیکس اے آئی کی کنفیگریشن
       const vertex_ai = new VertexAI({
         project: 'tars-ai-chat-ann-assistant', 
         location: 'us-central1',
@@ -35,9 +33,9 @@ module.exports = async function handler(req, res) {
         }
       });
 
-      // مستری انجن کا پرو ماڈل
+      // آپ کے حکم کے مطابق فائنل 3.1 پرو ماڈل
       const generativeModel = vertex_ai.getGenerativeModel({
-        model: 'gemini-1.5-pro-002', 
+        model: 'gemini-3.1-pro', 
         generationConfig: {
           responseMimeType: 'application/json' 
         }
@@ -56,5 +54,5 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  return res.status(404).send('Mistri Engine Backend is Active.');
+  return res.status(404).send('Mistri Engine 3.1 Pro Backend is Active.');
 };
