@@ -1,7 +1,7 @@
 const { VertexAI } = require('@google-cloud/vertexai');
 
 module.exports = async function handler(req, res) {
-  // CORS سیٹنگز
+  // CORS سیٹنگز تاکہ آپ کی ویب سائٹ (.pages.dev) اس بیک اینڈ سے جڑ سکے
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -13,27 +13,21 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const { prompt } = req.body;
+      if (!prompt) return res.status(400).json({ error: 'پرامپٹ خالی ہے۔' });
 
-      if (!prompt) {
-        return res.status(400).json({ error: 'پرامپٹ خالی ہے۔' });
+      const apiKey = process.env.VERTEX_API_KEY;
+      if (!apiKey) {
+        throw new Error('VERTEX_API_KEY انوائرمنٹ ویری ایبل ورسل پر نہیں ملا۔');
       }
 
-      const envCredentials = process.env.GOOGLE_CREDENTIALS_JSON;
-      if (!envCredentials) {
-        throw new Error('GOOGLE_CREDENTIALS_JSON انوائرمنٹ ویری ایبل نہیں ملا۔');
-      }
-
-      const credentials = JSON.parse(envCredentials.trim());
-
+      // ایجنٹ پلیٹ فارم (Vertex AI) کو آپ کی نئی چابی کے ساتھ لانچ کرنا
       const vertex_ai = new VertexAI({
         project: 'tars-ai-chat-ann-assistant', 
         location: 'us-central1',
-        googleAuthOptions: {
-          credentials: credentials
-        }
+        apiKey: apiKey
       });
 
-      // آپ کی نشاندہی کے مطابق بالکل درست اور مکمل نام
+      // فائنل اور طاقتور ترین 3.1 پرو ماڈل
       const generativeModel = vertex_ai.getGenerativeModel({
         model: 'gemini-3.1-pro-preview', 
         generationConfig: {
@@ -49,10 +43,10 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(response);
 
     } catch (error) {
-      console.error("Vertex AI Error:", error);
+      console.error("Agent Platform Error:", error);
       return res.status(500).json({ error: error.message });
     }
   }
 
-  return res.status(404).send('Mistri Engine 3.1 Pro Preview Backend is Active.');
+  return res.status(404).send('Mistri Engine 3.1 Pro Agent Platform is Active.');
 };
