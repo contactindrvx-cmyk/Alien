@@ -1,7 +1,7 @@
 const { VertexAI } = require('@google-cloud/vertexai');
 
 module.exports = async function handler(req, res) {
-  // CORS سیٹنگز: تاکہ آپ کا فرنٹ اینڈ (.pages.dev) اس سے رابطہ کر سکے
+  // CORS سیٹنگز
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -18,28 +18,36 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'پرامپٹ خالی ہے۔' });
       }
 
+      const envCredentials = process.env.GOOGLE_CREDENTIALS_JSON;
+      if (!envCredentials) {
+        throw new Error('GOOGLE_CREDENTIALS_JSON انوائرمنٹ ویری ایبل نہیں ملا۔');
+      }
+
+      // ٹیکسٹ کو صاف کر کے آبجیکٹ میں تبدیل کرنا تاکہ کوئی ایرر نہ آئے
+      const credentials = JSON.parse(envCredentials.trim());
+
       // ورٹیکس اے آئی کی کنفیگریشن
-      // یہاں ہم نے سروس اکاؤنٹ کی تفصیلات براہ راست نہیں ڈالیں تاکہ سیکیورٹی بنی رہے
       const vertex_ai = new VertexAI({
         project: 'tars-ai-chat-ann-assistant', 
-        location: 'us-central1'
+        location: 'us-central1',
+        googleAuthOptions: {
+          credentials: credentials
+        }
       });
 
-      // مستری انجن 3.1 پرو کے لیے سب سے جدید ماڈل
+      // مستری انجن کا پرو ماڈل
       const generativeModel = vertex_ai.getGenerativeModel({
-        model: 'gemini-1.5-pro-002', // یہ اس وقت کا بہترین پرو ماڈل ہے
+        model: 'gemini-1.5-pro-002', 
         generationConfig: {
           responseMimeType: 'application/json' 
         }
       });
 
-      // جیمنی سے رابطہ اور ٹوکن کا خودکار انتظام
       const result = await generativeModel.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }]
       });
 
       const response = result.response;
-      
       return res.status(200).json(response);
 
     } catch (error) {
@@ -48,5 +56,5 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  return res.status(404).send('Mistri Engine 3.1 Pro Backend is active.');
+  return res.status(404).send('Mistri Engine Backend is Active.');
 };
