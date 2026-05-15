@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
       const project = 'tars-ai-chat-ann-assistant';
       const location = 'us-central1';
 
-      // تمام ماڈلز کی لسٹ
+      // تمام بہترین ماڈلز کی ترجیحی لسٹ
       const modelsToTry = [
         'gemini-3.1-pro',
         'gemini-3.1-flash',
@@ -56,6 +56,30 @@ module.exports = async function handler(req, res) {
           const data = await response.json();
 
           if (response.ok) {
+            const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            
+            // مارک ڈاؤن کلینر تاکہ JSON خراب نہ ہو
+            let cleanedText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+            const firstBrace = cleanedText.indexOf('{');
+            const lastBrace = cleanedText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+              cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+            }
+
+            try {
+              // 🚀 جادو: جیمنی کے جواب (JSON) کو کھول کر اس کے سمری فیلڈ میں ماڈل کا نام فٹ کرنا
+              const parsedJson = JSON.parse(cleanedText);
+              parsedJson.summary = `⚙️ **Active Model:** \`${model}\`\n\n${parsedJson.summary || ''}`;
+              
+              const modifiedJsonString = JSON.stringify(parsedJson);
+              data.text = modifiedJsonString;
+              if (data.candidates?.[0]?.content?.parts?.[0]) {
+                data.candidates[0].content.parts[0].text = modifiedJsonString;
+              }
+            } catch (e) {
+              data.text = `⚙️ **Active Model:** \`${model}\`\n\n${rawText}`;
+            }
+
             responseData = data;
             successfulModel = model;
             break; 
@@ -71,26 +95,13 @@ module.exports = async function handler(req, res) {
         throw new Error(`تمام ماڈلز فیل ہو گئے۔ آخری ایرر: ${lastError}`);
       }
 
-      // گوگل کے جواب سے اصل کوڈ نکالنا
-      const aiText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      
-      // 🚀 جادو: ماڈل کا نام میسج کے بالکل اوپر ٹیکسٹ کے اندر شامل کرنا
-      const textWithModelInfo = `⚙️ **Active Model:** \`${successfulModel}\`\n\n${aiText}`;
-
-      // فرنٹ اینڈ کو جواب بھیجنا
-      return res.status(200).json({
-        active_model: successfulModel,
-        text: textWithModelInfo, // اب یہ نام چیٹ باکس میں صاف نظر آئے گا
-        candidates: responseData.candidates,
-        ...responseData
-      });
+      return res.status(200).json(responseData);
 
     } catch (error) {
-      console.error("بیک اینڈ فائنل کریش ایرر:", error);
+      console.error("بیک اینڈ کریش ایرر:", error);
       return res.status(500).json({ error: error.message });
     }
   }
 
   return res.status(404).send('Mistri Multi-Model Fallback Backend is Active.');
 };
-      
