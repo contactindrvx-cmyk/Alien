@@ -33,9 +33,9 @@ module.exports = async function handler(req, res) {
         }
       });
 
-      // آپ کے حکم کے مطابق فائنل 3.1 پرو ماڈل
+      // آپ کی نشاندہی کے مطابق بالکل درست اور مکمل نام
       const generativeModel = vertex_ai.getGenerativeModel({
-        model: 'gemini-3.1-pro', 
+        model: 'gemini-3.1-pro-preview', 
         generationConfig: {
           responseMimeType: 'application/json' 
         }
@@ -54,5 +54,5 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  return res.status(404).send('Mistri Engine 3.1 Pro Backend is Active.');
+  return res.status(404).send('Mistri Engine 3.1 Pro Preview Backend is Active.');
 };
