@@ -1,5 +1,5 @@
 module.exports = async function handler(req, res) {
-  // CORS سیٹنگز تاکہ آپ کا فرنٹ اینڈ اس بیک اینڈ سے بات کر سکے
+  // CORS سیٹنگز
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -21,21 +21,22 @@ module.exports = async function handler(req, res) {
       const project = 'tars-ai-chat-ann-assistant';
       const location = 'us-central1';
 
-      // آپ کی فرمائش کے مطابق تمام بیسٹ اور تھنکنگ ماڈلز کی ترجیحی لسٹ
+      // تمام ماڈلز کی لسٹ
       const modelsToTry = [
-        'gemini-3.1-pro',               // ۱. سب سے پہلا ٹارگٹ
-        'gemini-3.1-flash',             // ۲. دوسرا ٹارگٹ
-        'gemini-2.5-pro',               // ۳. ۲.۵ پرو ماڈل
-        'gemini-2.5-flash',             // ۴. ۲.۵ فلیش ماڈل
-        'gemini-2.5-flash-thinking',    // ۵. ۲.۵ فلیش تھنکنگ ماڈل
-        'gemini-2.0-flash-thinking'     // ۶. ۲.۰ فلیش تھنکنگ ماڈل
+        'gemini-3.1-pro',
+        'gemini-3.1-flash',
+        'gemini-1.5-pro-002',
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-thinking',
+        'gemini-2.0-flash-thinking'
       ];
 
       let lastError = null;
       let successfulModel = null;
       let responseData = null;
 
-      // آٹو سوئچ لوپ: ایک ایک کر کے ماڈل چیک کرے گا
+      // آٹو سوئچ لوپ
       for (const model of modelsToTry) {
         try {
           console.log(`Trying model: ${model}...`);
@@ -48,38 +49,39 @@ module.exports = async function handler(req, res) {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: 'application/json'
-              }
+              contents: [{ role: 'user', parts: [{ text: prompt }] }]
             })
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            // اگر یہ ماڈل چل گیا تو لوپ کو یہیں روک دو
             responseData = data;
             successfulModel = model;
             break; 
           } else {
-            console.error(`Model ${model} failed:`, data.error?.message);
             lastError = data.error?.message || `Status ${response.status}`;
           }
         } catch (err) {
-          console.error(`Fetch error with model ${model}:`, err.message);
           lastError = err.message;
         }
       }
 
-      // اگر خدانخواستہ کوئی بھی ماڈل نہ چل سکا
       if (!successfulModel) {
         throw new Error(`تمام ماڈلز فیل ہو گئے۔ آخری ایرر: ${lastError}`);
       }
 
-      // فرنٹ اینڈ کو جواب بھیجیں اور ساتھ کامیاب ماڈل کا نام بھی شامل کریں
+      // گوگل کے جواب سے اصل کوڈ نکالنا
+      const aiText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      // 🚀 جادو: ماڈل کا نام میسج کے بالکل اوپر ٹیکسٹ کے اندر شامل کرنا
+      const textWithModelInfo = `⚙️ **Active Model:** \`${successfulModel}\`\n\n${aiText}`;
+
+      // فرنٹ اینڈ کو جواب بھیجنا
       return res.status(200).json({
-        active_model: successfulModel, // یہ فرنٹ اینڈ کو بتائے گا کہ کون سا ماڈل ایکٹو ہوا ہے
+        active_model: successfulModel,
+        text: textWithModelInfo, // اب یہ نام چیٹ باکس میں صاف نظر آئے گا
+        candidates: responseData.candidates,
         ...responseData
       });
 
@@ -91,3 +93,4 @@ module.exports = async function handler(req, res) {
 
   return res.status(404).send('Mistri Multi-Model Fallback Backend is Active.');
 };
+      
